@@ -64,7 +64,8 @@ def index(state: State) -> Page:
 @route
 def assignment_list(state: State) -> Page:
     """Show the assignments that match the current filter."""
-    content = [
+    # Drafter pages can contain plain text and components like buttons.
+    content: list[PageContent] = [
         Header("Assignments"),
         SelectBox("status_filter", FILTERS, state.status_filter),
         Button("Apply filter", set_filter)
@@ -112,7 +113,8 @@ def assignment_form(state: State, draft: Assignment,
                     editing: bool, error: str = "") -> Page:
     """Build the form for adding or editing an assignment."""
     heading = "Edit Assignment" if editing else "Add Assignment"
-    content = [Header(heading)]
+    # Drafter pages can contain plain text and components like buttons.
+    content: list[PageContent] = [Header(heading)]
 
     if error:
         content.append(error)
