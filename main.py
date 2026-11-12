@@ -5,6 +5,8 @@ from drafter import *
 hide_debug_information()
 set_website_title("Student Assignment Tracker")
 set_website_framed(False)
+# Include the narrated demo when Drafter builds the public site.
+add_website_file("walkthrough.html")
 set_site_information(
     author="Zaheer Khan",
     description="Track assignments by course, mark them done, and check your progress.",
