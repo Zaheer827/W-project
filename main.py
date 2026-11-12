@@ -5,6 +5,13 @@ from drafter import *
 hide_debug_information()
 set_website_title("Student Assignment Tracker")
 set_website_framed(False)
+set_site_information(
+    author="Zaheer Khan",
+    description="Track assignments by course, mark them done, and check your progress.",
+    sources="CISC106 course materials, Drafter documentation, and ChatGPT coding assistance.",
+    planning="https://github.com/Zaheer827/W-project/blob/main/planning.md",
+    links=["https://github.com/Zaheer827/W-project"]
+)
 
 PRIORITIES = ["Low", "Medium", "High"]
 FILTERS = ["All", "Pending", "Completed"]
@@ -29,7 +36,7 @@ class State:
     next_id: int
 
 
-def find_assignment(state: State, assignment_id: int):
+def find_assignment(state: State, assignment_id: int) -> 'Assignment | None':
     """Find the assignment with the given ID, or return None if it's missing."""
     for assignment in state.assignments:
         if assignment.assignment_id == assignment_id:
@@ -68,6 +75,7 @@ def assignment_list(state: State) -> Page:
         status = "Completed" if assignment.completed else "Pending"
         if state.status_filter in ["All", status]:
             shown += 1
+            # The button carries the ID so filtering never changes which assignment it edits.
             target = Argument("assignment_id", assignment.assignment_id)
             action = "Reopen" if assignment.completed else "Complete"
             content.extend([
@@ -246,9 +254,46 @@ def save_settings(state: State, student_name: str) -> Page:
     return index(state)
 
 
-sample = Assignment(4, "Lab report", "CHEM133", "", "High", "", False)
-example_state = State([sample], "", "All", 5)
-assert_equal(find_assignment(example_state, 4), sample)
-assert_equal(find_assignment(example_state, 1), None)
+def test_tracker() -> None:
+    """Check the pages and state changes with a separate practice list."""
+    state = State([], "", "All", 1)
+    assert_equal("Welcome!" in index(state).content, True)
+    assert_equal("No assignments yet." in assignment_list(state).content, True)
+    assert_equal("0% complete" in progress(state).content, True)
+    assert_equal(TextBox("title", "") in add_assignment(state).content, True)
+    assert_equal(TextBox("student_name", "") in settings(state).content, True)
+    home = save_settings(state, " Sam ")
+    assert_equal(state.student_name, "Sam")
+    assert_equal("Welcome, Sam!" in home.content, True)
 
+    error = save_assignment(state, "", "Math", "", "Medium", "")
+    assert_equal("Please enter a title and course." in error.content, True)
+    assert_equal(state.next_id, 1)
+    assert_equal(state.assignments, [])
+    save_assignment(state, "Quiz", "Math", "", "Medium", "")
+    save_assignment(state, "Lab", "Chem", "", "Low", "")
+    assert_equal(state.next_id, 3)
+    assert_equal(find_assignment(state, 1), Assignment(1, "Quiz", "Math", "", "Medium", "", False))
+    assert_equal(find_assignment(state, 99), None)
+    assert_equal(TextBox("title", "Lab") in edit_assignment(state, 2).content, True)
+    update_assignment(state, 2, "Lab report", "Chem", "2026-12-01", "High", "Include the graph")
+    assert_equal(state.assignments[1], Assignment(2, "Lab report", "Chem", "2026-12-01",
+                                                  "High", "Include the graph", False))
+    update_assignment(state, 2, "Oops", " ", "", "Low", "")
+    assert_equal(state.assignments[1].title, "Lab report")
+    toggle_complete(state, 2)
+    assert_equal(state.assignments[1].completed, True)
+    assert_equal("50% complete" in progress(state).content, True)
+    filtered = set_filter(state, "Completed")
+    assert_equal(state.status_filter, "Completed")
+    assert_equal(Header("Lab report") in filtered.content, True)
+    assert_equal(Header("Quiz") in filtered.content, False)
+    toggle_complete(state, 2)
+    assert_equal("No assignments match this filter." in assignment_list(state).content, True)
+    delete_assignment(state, 1)
+    assert_equal(len(state.assignments), 1)
+    assert_equal(state.assignments[0].assignment_id, 2)
+
+
+test_tracker()
 start_server(State([], "", "All", 1))
